@@ -1,0 +1,208 @@
+import yt_dlp
+import threading
+import os
+import sys
+from pathlib import Path
+from tkinter import Tk, Canvas, Entry, Button, PhotoImage, messagebox, ttk
+def get_resource_path(relative_path):
+    try:
+        base_path = sys._MEIPASS 
+    except Exception:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
+
+
+OUTPUT_PATH = Path(__file__).parent
+ASSETS_PATH = OUTPUT_PATH / Path("build/assets/frame0")
+
+def relative_to_assets(path: str) -> Path:
+    return ASSETS_PATH / Path(path)
+
+ydl_opts = {
+    'ffmpeg_location': get_resource_path('.'),  
+}
+
+def download_video():
+    url = entry_1.get().strip()
+    audio_quality = audio_combo.get()
+    resolution = resolution_combo.get()
+    format_type = format_combo.get().lower()
+
+    if not url:
+        messagebox.showerror("Ошибка", "Введите ссылку на видео!")  
+        return
+
+    ydl_opts = {
+        'outtmpl': '%(title)s.%(ext)s',  
+        'ffmpeg_location': get_resource_path('.')
+    }
+
+    if format_type == 'mp3':
+    
+        ydl_opts['format'] = 'bestaudio/best'
+        ydl_opts['postprocessors'] = [{
+            'key': 'FFmpegExtractAudio',
+            'preferredcodec': 'mp3',
+            'preferredquality': audio_quality.replace('kbps', '') if audio_quality else '192',
+        }]
+    else:
+     
+        if resolution:
+            ydl_opts['format'] = f'bestvideo[height<={resolution.replace("p","")}]+bestaudio/best'
+        else:
+            ydl_opts['format'] = 'best'
+
+    def run_download():
+        try:
+            button_1.config(state="disabled") 
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                ydl.download([url])
+            messagebox.showinfo("Успех", "Скачивание завершено!")
+        except Exception as e:
+            messagebox.showerror("Ошибка", f"Ошибка при скачивания: {str(e)}")
+        finally:
+            button_1.config(state="normal")  
+    
+    thread = threading.Thread(target=run_download)
+    thread.daemon = True
+    thread.start()
+
+window = Tk()
+window.geometry("699x494")
+window.configure(bg="#FFFFFF")
+window.title("YouTube Video Saver")
+
+canvas = Canvas(
+    window,
+    bg="#FFFFFF",
+    height=494,
+    width=699,
+    bd=0,
+    highlightthickness=0,
+    relief="ridge"
+)
+
+canvas.place(x=0, y=0)
+canvas.create_rectangle(
+    0.0, 0.0, 699.0, 494.0,
+    fill="#4C2D69",
+    outline=""
+)
+
+canvas.create_text(
+    30.0,
+    64.0,
+    anchor="nw",
+    text="Video link:",
+    fill="#FFFFFF",
+    font=("Inter ExtraBold", 24 * -1)
+)
+
+canvas.create_text(
+    30.0,
+    407.0,
+    anchor="nw",
+    text="Format",
+    fill="#FFFFFF",
+    font=("Inter ExtraBold", 15 * -1)
+)
+
+entry_image_1 = PhotoImage(
+    file=relative_to_assets("entry_1.png"))
+entry_bg_1 = canvas.create_image(
+    349.5,
+    120.5,
+    image=entry_image_1
+)
+entry_1 = Entry(
+    bd=0,
+    bg="#D9D9D9",
+    fg="#000716",
+    highlightthickness=0,
+    font=("Arial", 12)
+)
+entry_1.place(
+    x=39.5,
+    y=92.0,
+    width=620.0,
+    height=55.0
+)
+
+format_combo = ttk.Combobox(
+    window,
+    values=["mp4", "mp3"],
+    state="readonly",
+    font=("Arial", 12)
+)
+format_combo.set("mp4")  
+format_combo.place(
+    x=35.0,
+    y=425.0,
+    width=147.0,
+    height=46.0
+)
+
+resolution_combo = ttk.Combobox(
+    window,
+    values=["144p","240p","360p","480p","720p", "1080p", "1440p", "2160p"],
+    state="readonly",
+    font=("Arial", 12)
+)
+resolution_combo.set("1080p") 
+resolution_combo.place(
+    x=35.0,
+    y=317.0,
+    width=147.0,
+    height=46.0
+)
+
+canvas.create_text(
+    30.0,
+    298.0,
+    anchor="nw",
+    text="Resolution",
+    fill="#FFFFFF",
+    font=("Inter ExtraBold", 15 * -1)
+)
+
+audio_combo = ttk.Combobox(
+    window,
+    values=["128 kbps", "192 kbps", "320 kbps"],
+    state="readonly",
+    font=("Arial", 12)
+)
+audio_combo.set("192 kbps")  
+audio_combo.place(
+    x=35.0,
+    y=209.0,
+    width=147.0,
+    height=46.0
+)
+
+canvas.create_text(
+    31.0,
+    185.0,
+    anchor="nw",
+    text="Audio quality",
+    fill="#FFFFFF",
+    font=("Inter ExtraBold", 15 * -1)
+)
+
+button_image_1 = PhotoImage(
+    file=relative_to_assets("button_1.png"))
+button_1 = Button(
+    image=button_image_1,
+    borderwidth=0,
+    highlightthickness=0,
+    command=download_video,
+    relief="flat"
+)
+button_1.place(
+    x=472.0,
+    y=276.0,
+    width=227.0,
+    height=224.0
+)
+
+window.resizable(False, False)
+window.mainloop()
